@@ -81,14 +81,6 @@ const createDevelopQueue = getRunner => {
   return queue
 }
 
-const pushJob = (queue, job) =>
-  new Promise((resolve, reject) =>
-    queue
-      .push(job)
-      .on(`finish`, resolve)
-      .on(`failed`, reject)
-  )
-
 /**
  * Returns a promise that pushes jobs onto queue and resolves onces
  * they're all finished processing (or rejects if one or more jobs
@@ -100,15 +92,22 @@ const processBatch = async (queue, jobs, activity) => {
     return Promise.resolve()
   }
 
-  const runningJobs = jobs.map(job =>
-    pushJob(queue, job).then(v => {
-      if (activity.tick) {
-        activity.tick()
-      }
-      return v
-    })
-  )
-  return Promise.all(runningJobs)
+  return new Promise((resolve, reject) => {
+    if (activity.tick) {
+      queue.on(`task_finish`, () => activity.tick())
+    }
+
+    queue
+      .on(`task_failed`, (...err) => {
+        // Note: the first arg is the path, the second the error
+        reject(err)
+        return err
+      })
+      // Note: `drain` fires when all tasks _finish_, `empty` fires when queue is empty (but tasks are still running)
+      .on(`drain`, resolve)
+
+    jobs.forEach(job => queue.push(job))
+  })
 }
 
 module.exports = {
