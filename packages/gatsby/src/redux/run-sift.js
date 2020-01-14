@@ -45,8 +45,8 @@ const getFilters = filters =>
 /////////////////////////////////////////////////////////////////////
 
 function isEqId(firstOnly, siftArgs) {
+  // The `id` of each node is invariably unique. So if a query is doing id $eq(string) it can find only one node tops
   return (
-    firstOnly &&
     siftArgs.length > 0 &&
     siftArgs[0].id &&
     Object.keys(siftArgs[0].id).length === 1 &&
